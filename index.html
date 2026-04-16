@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgroWeather – District Weather & Farmer Advisory Bot</title>
+  <meta name="description" content="WhatsApp-connected weather advisory for farmers. Enter your district PIN to get real-time forecasts and agro-advisories." />
+  <meta name="keywords" content="weather advisory, farmer advisory, district weather, Karnataka weather, WhatsApp bot, agro-meteorology" />
+  <meta name="author" content="AgroWeather" />
+  <meta property="og:title" content="AgroWeather – District Farmer Advisory" />
+  <meta property="og:description" content="Real-time weather forecasts and farming advisories by district PIN." />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── Animated background ── -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="orb orb-4"></div>
+</div>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar" id="sidebar" role="navigation" aria-label="Navigation">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon" aria-hidden="true">🌦️</div>
+      <div>
+        <span class="logo-title">AgroWeather</span>
+        <span class="logo-sub">WhatsApp Weather Bot</span>
+      </div>
+    </div>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">✕</button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Quick actions">
+    <p class="nav-label">Quick Queries</p>
+    <button class="quick-topic" id="qt-rainfall" data-q="What is the rainfall forecast for the next 3 days in my district?">🌧️ Rainfall Forecast</button>
+    <button class="quick-topic" id="qt-temp" data-q="What are the temperature extremes expected this week? Any heat stress risk for crops?">🌡️ Temperature & Heat Stress</button>
+    <button class="quick-topic" id="qt-sowing" data-q="Is it a good time to sow seeds given current weather conditions?">🌱 Sowing Advisory</button>
+    <button class="quick-topic" id="qt-pest" data-q="What are the pest and disease risks based on current humidity and temperature?">🐛 Pest & Disease Risk</button>
+    <button class="quick-topic" id="qt-irrigation" data-q="Do I need to irrigate my crops today given the weather forecast?">💧 Irrigation Advice</button>
+    <button class="quick-topic" id="qt-harvest" data-q="Is the weather suitable for harvesting this week? Any rain risk?">🌾 Harvest Window</button>
+    <button class="quick-topic" id="qt-frost" data-q="Is there any frost or cold wave risk in my district this week?">❄️ Frost & Cold Waves</button>
+    <button class="quick-topic" id="qt-wind" data-q="Are there strong wind warnings that could affect spraying operations?">💨 Wind & Spraying</button>
+
+    <p class="nav-label" style="margin-top:10px;">About</p>
+    <div class="info-card">
+      <div class="info-row">🔐 <span>PIN-authenticated per district</span></div>
+      <div class="info-row">📡 <span>Real-time weather via API</span></div>
+      <div class="info-row">🤖 <span>AI-powered agro-advisory</span></div>
+      <div class="info-row">📱 <span>WhatsApp integration ready</span></div>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <p class="nav-label">District</p>
+    <div class="district-badge" id="districtBadge">
+      <span class="district-pin-label">PIN</span>
+      <span class="district-pin-val" id="districtPinDisplay">—</span>
+      <span class="district-name" id="districtNameDisplay">Not authenticated</span>
+    </div>
+    <p class="nav-label" style="margin-top:10px;">Data Sources</p>
+    <div class="source-chips">
+      <span class="chip">Gemini AI</span>
+      <span class="chip">OpenWeatherMap</span>
+      <span class="chip">IMD</span>
+      <span class="chip">ICAR</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main" id="main">
+
+  <!-- Topbar -->
+  <header class="topbar" role="banner">
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle sidebar" aria-expanded="true">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-center">
+      <div class="status-dot" id="statusDot" aria-hidden="true"></div>
+      <span id="topbarTitle">AgroWeather Advisory</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="clearBtn" title="Clear conversation" aria-label="Clear conversation">🗑️</button>
+      <button class="icon-btn" id="pinBtn" title="Change District PIN" aria-label="Change district PIN">🔐</button>
+      <button class="icon-btn" id="settingsBtn" title="API Settings" aria-label="Configure API key">⚙️</button>
+    </div>
+  </header>
+
+  <!-- PIN Authentication Modal -->
+  <div class="modal-overlay" id="pinModal" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+    <div class="modal">
+      <h2 id="pinModalTitle">🔐 Enter District PIN</h2>
+      <p>Enter your official district PIN code to authenticate and receive weather advisories specific to your region.</p>
+      <div class="input-group">
+        <label for="pinInput">District PIN Code</label>
+        <div class="key-input-wrap">
+          <input type="text" id="pinInput" placeholder="e.g. 560001, KA-DWD, DHARWAD…"
+            autocomplete="off" spellcheck="false" maxlength="20"
+            aria-describedby="pinHelp" />
+          <span class="input-icon">📍</span>
+        </div>
+        <p id="pinHelp" class="input-hint">Enter a PIN code, district name, or any geographic identifier for your area.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="cancelPin">Cancel</button>
+        <button class="btn-primary" id="savePinBtn">🌦️ Get Weather Advisory</button>
+      </div>
+      <p class="modal-note">Your PIN is used only to identify your district for weather lookups. It is never stored on external servers.</p>
+    </div>
+  </div>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal">
+      <h2 id="settingsModalTitle">⚙️ Configure Gemini API</h2>
+      <p>Enter your Gemini API key to power AI-driven weather analysis and farmer advisories. Stored locally in your browser only.</p>
+      <div class="input-group">
+        <label for="apiKeyInput">Gemini API Key</label>
+        <div class="key-input-wrap">
+          <input type="password" id="apiKeyInput" placeholder="AIza…" autocomplete="off" spellcheck="false" />
+          <button class="toggle-vis" id="toggleVis" aria-label="Toggle key visibility">👁️</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="cancelSettings">Cancel</button>
+        <button class="btn-primary" id="saveSettings">Save & Connect</button>
+      </div>
+      <p class="modal-note">Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio ↗</a></p>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat-area" id="chatArea" role="log" aria-live="polite" aria-label="Chat messages">
+
+    <!-- Welcome screen -->
+    <div class="welcome" id="welcome">
+      <div class="welcome-hero">
+        <span class="welcome-icon" aria-hidden="true">🌦️</span>
+        <h1>AgroWeather Bot</h1>
+        <p class="welcome-sub">District-specific weather forecasts & farmer advisories via WhatsApp</p>
+        <button class="auth-cta" id="welcomeAuthBtn">
+          🔐 Enter District PIN to Start
+        </button>
+      </div>
+
+      <div class="feature-grid" aria-label="Available features">
+        <div class="feature-card" role="img" aria-label="Real-time weather">
+          <span class="feature-icon">🌡️</span>
+          <span class="feature-title">Live Weather</span>
+          <span class="feature-desc">Current conditions & 7-day forecast</span>
+        </div>
+        <div class="feature-card" role="img" aria-label="Rainfall prediction">
+          <span class="feature-icon">🌧️</span>
+          <span class="feature-title">Rainfall Alerts</span>
+          <span class="feature-desc">Precipitation probability & intensity</span>
+        </div>
+        <div class="feature-card" role="img" aria-label="Farming advisory">
+          <span class="feature-icon">🌱</span>
+          <span class="feature-title">Crop Advisory</span>
+          <span class="feature-desc">Sowing, irrigation & harvest windows</span>
+        </div>
+        <div class="feature-card" role="img" aria-label="Pest warning">
+          <span class="feature-icon">🐛</span>
+          <span class="feature-title">Pest Alerts</span>
+          <span class="feature-desc">Weather-driven disease & pest risk</span>
+        </div>
+        <div class="feature-card" role="img" aria-label="WhatsApp integration">
+          <span class="feature-icon">📱</span>
+          <span class="feature-title">WhatsApp Ready</span>
+          <span class="feature-desc">Same advisories via WhatsApp messaging</span>
+        </div>
+        <div class="feature-card" role="img" aria-label="District based">
+          <span class="feature-icon">📍</span>
+          <span class="feature-title">District-Specific</span>
+          <span class="feature-desc">Hyper-local forecasts by PIN code</span>
+        </div>
+      </div>
+
+      <div class="whatsapp-info">
+        <div class="wa-badge">📱 WhatsApp Bot</div>
+        <p>Send your district PIN to <strong>+91-XXXXX-XXXXX</strong> on WhatsApp to receive advisories directly in your chat.</p>
+        <div class="wa-example">
+          <div class="wa-msg-out">Hello! My PIN is 560001</div>
+          <div class="wa-msg-in">🌦️ <strong>Bengaluru District</strong> — Partly cloudy today, 24°C. 60% rain tomorrow. Advisory: Hold irrigation today, rain expected tomorrow. Ideal for groundnut pegging stage. 🌱</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages injected here -->
+    <div class="messages" id="messages" aria-label="Conversation"></div>
+  </div>
+
+  <!-- Input bar -->
+  <div class="input-bar" role="form" aria-label="Send a message">
+    <div class="input-wrap">
+      <textarea
+        id="userInput"
+        placeholder="Ask about weather, rainfall, sowing windows, pest risk…"
+        rows="1"
+        maxlength="2000"
+        aria-label="Your weather query"
+        aria-multiline="true"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" aria-label="Send message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    <p class="input-disclaimer">AI-generated weather advisory. Always verify critical decisions with local meteorological officers or agronomists.</p>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

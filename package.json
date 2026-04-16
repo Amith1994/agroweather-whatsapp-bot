@@ -1,0 +1,30 @@
+{
+  "name": "agroweather-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Weather Bot with District PIN auth, OpenWeatherMap, and Gemini AI advisories.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx nodemon server.js",
+    "test": "node test/test_webhook.js"
+  },
+  "keywords": ["whatsapp", "weather", "bot", "twilio", "farmer", "advisory", "india"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "axios": "^1.7.2",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "twilio": "^5.3.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
