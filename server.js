@@ -745,14 +745,18 @@ app.get('*', (req, res) => {
 ──────────────────────────────────────────────────────────── */
 app.listen(PORT, () => {
   console.log(`\n🌦️  AgroWeather Bot running on http://localhost:${PORT}`);
-  console.log(`📱 WhatsApp webhook:    POST /webhook`);
-  console.log(`💊 Health check:        GET  /health`);
-  console.log(`📡 OWM enabled:         ${!!process.env.OPENWEATHER_API_KEY}`);
+  console.log(`\n📡 API Endpoints:`);
+  console.log(`   POST /webhook              → Twilio WhatsApp handler`);
+  console.log(`   GET  /health               → Server health + district count`);
+  console.log(`   GET  /api/districts        → All ${Object.keys(DISTRICT_MAP).length} pincodes across 30 Karnataka districts`);
+  console.log(`   GET  /api/district/:pin    → Lookup district by PIN`);
+  console.log(`   GET  /api/weather/:pin     → Live weather for a PIN`);
   console.log(`\n📋 Environment:`);
   console.log(`   NODE_ENV:            ${process.env.NODE_ENV || 'development'}`);
   console.log(`   TWILIO_ACCOUNT_SID:  ${process.env.TWILIO_ACCOUNT_SID ? '✓ Set' : '✗ Missing'}`);
   console.log(`   GEMINI_API_KEY:      ${process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Missing'}`);
   console.log(`   OPENWEATHER_API_KEY: ${process.env.OPENWEATHER_API_KEY ? '✓ Set' : '⚠ Optional (not set)'}`);
+  console.log(`   IMD Mausamgram:      ✓ Enabled (primary weather source)`);
   console.log(`\n🔗 Use ngrok to expose this server to Twilio:`);
   console.log(`   ngrok http ${PORT}`);
   console.log(`   Then set Twilio Sandbox webhook to: https://<id>.ngrok.io/webhook\n`);
