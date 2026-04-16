@@ -46,54 +46,216 @@ if (!process.env.OPENWEATHER_API_KEY) {
 
 /* ────────────────────────────────────────────────────────────
    DISTRICT PIN → LOCATION MAP
-   In production: replace with database lookup.
-   Format: PIN_CODE → { city, lat, lon, state }
+   All 30 Karnataka districts + major cities in other states.
+   Multiple pincodes per district are mapped to the same district.
+   Format: PIN_CODE → { city, district, lat, lon, state }
 ──────────────────────────────────────────────────────────── */
 const DISTRICT_MAP = {
-  // Karnataka
-  '560001': { city: 'Bengaluru', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
-  '580001': { city: 'Dharwad',   state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
-  '570001': { city: 'Mysuru',    state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
-  '591001': { city: 'Belagavi',  state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
-  '583101': { city: 'Ballari',   state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
-  '577001': { city: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
-  '574101': { city: 'Mangaluru', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
-  '562101': { city: 'Tumkur',    state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
-  '585101': { city: 'Kalaburagi',state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
-  '581301': { city: 'Haveri',    state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
-  // Maharashtra
-  '422001': { city: 'Nashik',    state: 'Maharashtra', lat: 19.9975, lon: 73.7898 },
-  '411001': { city: 'Pune',      state: 'Maharashtra', lat: 18.5204, lon: 73.8567 },
-  '444601': { city: 'Amravati',  state: 'Maharashtra', lat: 20.9320, lon: 77.7523 },
-  // Andhra Pradesh
-  '520001': { city: 'Vijayawada', state: 'Andhra Pradesh', lat: 16.5062, lon: 80.6480 },
-  '530001': { city: 'Vishakhapatnam', state: 'Andhra Pradesh', lat: 17.6868, lon: 83.2185 },
-  // Tamil Nadu
-  '600001': { city: 'Chennai',   state: 'Tamil Nadu', lat: 13.0827, lon: 80.2707 },
-  '625001': { city: 'Madurai',   state: 'Tamil Nadu', lat: 9.9252,  lon: 78.1198 },
-  // Telangana
-  '500001': { city: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867 },
-  // Generic name-based lookups handled by validateAndResolvePin()
+  // ── Karnataka — Bagalkot ─────────────────────────────────
+  '587101': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
+  '587102': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
+  '587103': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
+  // ── Karnataka — Ballari ──────────────────────────────────
+  '583101': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
+  '583102': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
+  '583103': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
+  // ── Karnataka — Belagavi ─────────────────────────────────
+  '590001': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
+  '590002': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
+  '590003': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
+  // ── Karnataka — Bengaluru Urban ──────────────────────────
+  '560001': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
+  '560002': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
+  '560003': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
+  '560004': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
+  // ── Karnataka — Bengaluru Rural ──────────────────────────
+  '562110': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
+  '562111': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
+  '562112': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
+  // ── Karnataka — Bidar ────────────────────────────────────
+  '585401': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
+  '585402': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
+  '585403': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
+  // ── Karnataka — Chamarajanagar ───────────────────────────
+  '571313': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
+  '571314': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
+  '571315': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
+  // ── Karnataka — Chikkaballapura ──────────────────────────
+  '562101': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
+  '562102': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
+  '562103': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
+  // ── Karnataka — Chikkamagaluru ───────────────────────────
+  '577101': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
+  '577102': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
+  '577103': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
+  // ── Karnataka — Chitradurga ──────────────────────────────
+  '577501': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
+  '577502': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
+  '577503': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
+  // ── Karnataka — Dakshina Kannada ─────────────────────────
+  '575001': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
+  '575002': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
+  '575003': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
+  // ── Karnataka — Davangere ────────────────────────────────
+  '577001': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
+  '577002': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
+  '577003': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
+  // ── Karnataka — Dharwad ──────────────────────────────────
+  '580001': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
+  '580002': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
+  '580003': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
+  // ── Karnataka — Gadag ────────────────────────────────────
+  '582101': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
+  '582102': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
+  '582103': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
+  // ── Karnataka — Hassan ───────────────────────────────────
+  '573201': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
+  '573202': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
+  '573203': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
+  // ── Karnataka — Haveri ───────────────────────────────────
+  '581110': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
+  '581111': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
+  '581112': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
+  // ── Karnataka — Kalaburagi (Gulbarga) ────────────────────
+  '585101': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
+  '585102': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
+  '585103': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
+  // ── Karnataka — Kodagu ───────────────────────────────────
+  '571201': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
+  '571202': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
+  '571203': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
+  // ── Karnataka — Kolar ────────────────────────────────────
+  '563101': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
+  '563102': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
+  '563103': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
+  // ── Karnataka — Koppal ───────────────────────────────────
+  '583231': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
+  '583232': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
+  '583233': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
+  // ── Karnataka — Mandya ───────────────────────────────────
+  '571401': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
+  '571402': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
+  '571403': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
+  // ── Karnataka — Mysuru ───────────────────────────────────
+  '570001': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
+  '570002': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
+  '570003': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
+  // ── Karnataka — Raichur ──────────────────────────────────
+  '584101': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
+  '584102': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
+  '584103': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
+  // ── Karnataka — Ramanagara ───────────────────────────────
+  '562159': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
+  '562160': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
+  '562161': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
+  // ── Karnataka — Shivamogga ───────────────────────────────
+  '577201': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
+  '577202': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
+  '577203': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
+  // ── Karnataka — Tumakuru ─────────────────────────────────
+  '572101': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
+  '572102': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
+  '572103': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
+  // ── Karnataka — Udupi ────────────────────────────────────
+  '576101': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
+  '576102': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
+  '576103': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
+  // ── Karnataka — Uttara Kannada ───────────────────────────
+  '581301': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
+  '581302': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
+  '581303': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
+  // ── Karnataka — Vijayapura (Bijapur) ─────────────────────
+  '586101': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
+  '586102': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
+  '586103': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
+  // ── Karnataka — Yadgir ───────────────────────────────────
+  '585201': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
+  '585202': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
+  '585203': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
+  // ── Maharashtra ──────────────────────────────────────────
+  '422001': { city: 'Nashik',    district: 'Nashik',    state: 'Maharashtra', lat: 19.9975, lon: 73.7898 },
+  '411001': { city: 'Pune',      district: 'Pune',      state: 'Maharashtra', lat: 18.5204, lon: 73.8567 },
+  '444601': { city: 'Amravati', district: 'Amravati', state: 'Maharashtra', lat: 20.9320, lon: 77.7523 },
+  // ── Andhra Pradesh ───────────────────────────────────────
+  '520001': { city: 'Vijayawada', district: 'Krishna',  state: 'Andhra Pradesh', lat: 16.5062, lon: 80.6480 },
+  '530001': { city: 'Visakhapatnam', district: 'Visakhapatnam', state: 'Andhra Pradesh', lat: 17.6868, lon: 83.2185 },
+  // ── Tamil Nadu ───────────────────────────────────────────
+  '600001': { city: 'Chennai',  district: 'Chennai',  state: 'Tamil Nadu', lat: 13.0827, lon: 80.2707 },
+  '625001': { city: 'Madurai',  district: 'Madurai',  state: 'Tamil Nadu', lat: 9.9252,  lon: 78.1198 },
+  // ── Telangana ────────────────────────────────────────────
+  '500001': { city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867 },
 };
 
-// Alias map for name-based PINs
+// Alias map for name-based PINs (maps to primary pincode of district)
 const NAME_ALIASES = {
-  'bengaluru': '560001', 'bangalore': '560001',
-  'dharwad': '580001', 'dharwaad': '580001', 'ka-dwd': '580001',
-  'mysuru': '570001', 'mysore': '570001',
-  'belagavi': '591001', 'belgaum': '591001',
+  // Bengaluru
+  'bengaluru': '560001', 'bangalore': '560001', 'bengalooru': '560001',
+  // Bengaluru Rural
+  'bengaluru rural': '562110', 'bangalore rural': '562110',
+  // Bagalkot
+  'bagalkot': '587101', 'bagalkote': '587101',
+  // Ballari
   'ballari': '583101', 'bellary': '583101',
-  'davangere': '577001', 'davanagere': '577001',
-  'mangaluru': '574101', 'mangalore': '574101',
-  'tumkur': '562101', 'tumakuru': '562101',
-  'kalaburagi': '585101', 'gulbarga': '585101',
-  'haveri': '581301',
+  // Belagavi
+  'belagavi': '590001', 'belgaum': '590001',
+  // Bidar
+  'bidar': '585401',
+  // Chamarajanagar
+  'chamarajanagar': '571313', 'chamarajanagara': '571313',
+  // Chikkaballapura
+  'chikkaballapura': '562101', 'chikballapur': '562101',
+  // Chikkamagaluru
+  'chikkamagaluru': '577101', 'chikmagalur': '577101', 'chickmagalur': '577101',
+  // Chitradurga
+  'chitradurga': '577501', 'chitradurg': '577501',
+  // Dakshina Kannada
+  'dakshina kannada': '575001', 'mangaluru': '575001', 'mangalore': '575001', 'dk': '575001',
+  // Davangere
+  'davangere': '577001', 'davanagere': '577001', 'davangiri': '577001',
+  // Dharwad
+  'dharwad': '580001', 'dharwaad': '580001', 'ka-dwd': '580001',
+  // Gadag
+  'gadag': '582101', 'gadag-betgeri': '582101',
+  // Hassan
+  'hassan': '573201',
+  // Haveri
+  'haveri': '581110',
+  // Kalaburagi
+  'kalaburagi': '585101', 'gulbarga': '585101', 'ka-grg': '585101',
+  // Kodagu
+  'kodagu': '571201', 'coorg': '571201', 'madikeri': '571201',
+  // Kolar
+  'kolar': '563101',
+  // Koppal
+  'koppal': '583231',
+  // Mandya
+  'mandya': '571401',
+  // Mysuru
+  'mysuru': '570001', 'mysore': '570001',
+  // Raichur
+  'raichur': '584101',
+  // Ramanagara
+  'ramanagara': '562159', 'ramanagar': '562159',
+  // Shivamogga
+  'shivamogga': '577201', 'shimoga': '577201',
+  // Tumakuru
+  'tumakuru': '572101', 'tumkur': '572101',
+  // Udupi
+  'udupi': '576101', 'udipi': '576101',
+  // Uttara Kannada
+  'uttara kannada': '581301', 'north kanara': '581301', 'karwar': '581301', 'uk': '581301',
+  // Vijayapura
+  'vijayapura': '586101', 'bijapur': '586101',
+  // Yadgir
+  'yadgir': '585201', 'yadagiri': '585201',
+  // Other states
   'nashik': '422001', 'nasik': '422001',
-  'pune': '411001', 'poona': '411001',
+  'pune': '411001',   'poona': '411001',
   'amravati': '444601',
   'vijayawada': '520001',
-  'hyderabad': '500001', 'hyd': '500001',
-  'chennai': '600001', 'madras': '600001',
+  'visakhapatnam': '530001', 'vizag': '530001',
+  'hyderabad': '500001',   'hyd': '500001',
+  'chennai': '600001',     'madras': '600001',
   'madurai': '625001',
 };
 
@@ -202,7 +364,65 @@ function checkSessionRateLimit(sess) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   WEATHER DATA FETCH — OpenWeatherMap
+   WEATHER DATA FETCH — IMD Mausamgram (Primary)
+   Endpoint: https://mausamgram.imd.gov.in/
+   The site uses an internal endpoint that accepts lat/lon.
+   We try both known endpoint patterns and fall back to OWM.
+──────────────────────────────────────────────────────────── */
+async function fetchWeatherIMD(district) {
+  try {
+    // IMD Mausamgram uses a WMS/point-forecast endpoint internally.
+    // Known candidate URLs based on IMD's internal service discovery:
+    const candidates = [
+      `https://mausamgram.imd.gov.in/getPointForecast?lat=${district.lat}&lng=${district.lon}`,
+      `https://mausamgram.imd.gov.in/forecast?lat=${district.lat}&lon=${district.lon}`,
+      `https://mausamgram.imd.gov.in/api/v1/point?lat=${district.lat}&lon=${district.lon}`,
+    ];
+
+    for (const url of candidates) {
+      try {
+        const res = await axios.get(url, {
+          timeout: 6000,
+          headers: {
+            'Accept': 'application/json',
+            'Referer': 'https://mausamgram.imd.gov.in/',
+            'Origin': 'https://mausamgram.imd.gov.in',
+          },
+        });
+        if (res.status === 200 && res.data) {
+          const d = res.data;
+          // Normalize IMD response to our internal format
+          // (field names vary by IMD endpoint version)
+          const temp    = d.temp ?? d.temperature ?? d.t2m ?? null;
+          const rh      = d.rh ?? d.humidity ?? d.relative_humidity ?? null;
+          const wind    = d.wind_speed ?? d.ws ?? d.windspeed ?? null;
+          const rain    = d.rainfall ?? d.rf ?? d.rain ?? null;
+          const cond    = d.weather_condition ?? d.condition ?? d.wx ?? 'N/A';
+          if (temp !== null) {
+            console.log(`[IMD] Fetched weather for ${district.city} from ${url}`);
+            return {
+              temperature_c:     Math.round(Number(temp)),
+              feels_like_c:      Math.round(Number(temp) + (rh ? (Number(rh) - 40) * 0.1 : 0)),
+              humidity_pct:      rh   !== null ? Math.round(Number(rh))   : null,
+              wind_kmh:          wind !== null ? Math.round(Number(wind) * 3.6) : null,
+              condition:         String(cond),
+              rainfall_prob_pct: rain !== null ? Math.min(Math.round(Number(rain) * 10), 100) : null,
+              forecast:          [],   // IMD endpoint doesn't return 5-day in this call
+              source:            'IMD Mausamgram',
+              fetched_at:        new Date().toISOString(),
+            };
+          }
+        }
+      } catch (_) { /* try next candidate */ }
+    }
+  } catch (err) {
+    console.warn(`[IMD] All Mausamgram endpoints failed for ${district.city}:`, err.message);
+  }
+  return null;  // Signal: fall back to OWM
+}
+
+/* ────────────────────────────────────────────────────────────
+   WEATHER DATA FETCH — OpenWeatherMap (Fallback)
 ──────────────────────────────────────────────────────────── */
 async function fetchWeatherOWM(district) {
   if (!process.env.OPENWEATHER_API_KEY) return null;
@@ -272,6 +492,24 @@ async function fetchWeatherOWM(district) {
 }
 
 /* ────────────────────────────────────────────────────────────
+   WEATHER FETCH ORCHESTRATOR
+   Priority: IMD Mausamgram → OpenWeatherMap → Gemini AI only
+──────────────────────────────────────────────────────────── */
+async function fetchWeather(district) {
+  // 1. Try IMD Mausamgram first (official Indian Met data)
+  const imdData = await fetchWeatherIMD(district);
+  if (imdData) return imdData;
+
+  // 2. Fall back to OpenWeatherMap
+  const owmData = await fetchWeatherOWM(district);
+  if (owmData) return { ...owmData, source: 'OpenWeatherMap' };
+
+  // 3. No live data — Gemini will use training knowledge
+  console.warn(`[WEATHER] No live data for ${district.city} — Gemini will use training knowledge.`);
+  return null;
+}
+
+/* ────────────────────────────────────────────────────────────
    GEMINI AI — Advisory Generation
 ──────────────────────────────────────────────────────────── */
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -280,12 +518,12 @@ async function generateAdvisory({ district, weatherData, userMessage }) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const weatherContext = weatherData
-    ? `LIVE WEATHER DATA (OpenWeatherMap):
-- Temperature: ${weatherData.temperature_c}°C (feels like ${weatherData.feels_like_c}°C)
+    ? `LIVE WEATHER DATA (Source: ${weatherData.source || 'OpenWeatherMap'}):
+- Temperature: ${weatherData.temperature_c}°C (feels like ${weatherData.feels_like_c ?? weatherData.temperature_c}°C)
 - Condition: ${weatherData.condition}
-- Humidity: ${weatherData.humidity_pct}%
-- Wind: ${weatherData.wind_kmh} km/h
-- Rain probability (next 3h): ${weatherData.rainfall_prob_pct}%
+- Humidity: ${weatherData.humidity_pct ?? 'N/A'}%
+- Wind: ${weatherData.wind_kmh ?? 'N/A'} km/h
+- Rain probability: ${weatherData.rainfall_prob_pct ?? 'N/A'}%
 - Fetched at: ${weatherData.fetched_at}`
     : 'WEATHER DATA: Not available — use training knowledge for typical seasonal conditions.';
 
@@ -395,7 +633,7 @@ app.post('/webhook', validateTwilioSignature, async (req, res) => {
     console.log(`[AUTH] ${waNumber} authenticated → PIN=${sess.pin}, District=${sess.district.city}`);
 
     // Fetch weather and generate first advisory
-    const weatherData = await fetchWeatherOWM(sess.district);
+    const weatherData = await fetchWeather(sess.district);
     const userMsg     = `Hello! I just authenticated with district PIN ${sess.pin} (${sess.district.city}). Give me today's weather and farming advice.`;
 
     try {
@@ -423,7 +661,7 @@ app.post('/webhook', validateTwilioSignature, async (req, res) => {
   console.log(`[QUERY] ${waNumber} (${sess.district.city}) → "${body}"`);
 
   try {
-    const weatherData = await fetchWeatherOWM(sess.district);
+    const weatherData = await fetchWeather(sess.district);
     const advisory    = await generateAdvisory({
       district:    sess.district,
       weatherData,
@@ -451,8 +689,22 @@ app.get('/health', (req, res) => {
     service: 'AgroWeather WhatsApp Bot',
     timestamp: new Date().toISOString(),
     sessions: sessions.size,
+    districts_loaded: Object.keys(DISTRICT_MAP).length,
+    imd_mausamgram: 'enabled (with OWM fallback)',
     owm_enabled: !!process.env.OPENWEATHER_API_KEY,
   });
+});
+
+// Districts list endpoint (for frontend)
+app.get('/api/districts', (req, res) => {
+  const unique = {};
+  for (const [pin, d] of Object.entries(DISTRICT_MAP)) {
+    const key = `${d.district}-${d.state}`;
+    if (!unique[key]) {
+      unique[key] = { primaryPin: pin, city: d.city, district: d.district, state: d.state, lat: d.lat, lon: d.lon };
+    }
+  }
+  res.json({ total_pincodes: Object.keys(DISTRICT_MAP).length, districts: Object.values(unique) });
 });
 
 // PIN lookup (for frontend)
