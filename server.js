@@ -1,4 +1,4 @@
-// =============================================================
+﻿// =============================================================
 // AGROWEATHER WHATSAPP BOT — Express Backend
 // Twilio Webhooks + OpenWeatherMap + Gemini AI Advisory
 // =============================================================
@@ -49,217 +49,287 @@ if (!process.env.OPENWEATHER_API_KEY) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   DISTRICT PIN → LOCATION MAP
-   All 30 Karnataka districts + major cities in other states.
-   Multiple pincodes per district are mapped to the same district.
-   Format: PIN_CODE → { city, district, lat, lon, state }
+/* ────────────────────────────────────────────────────────────
+   DISTRICT PIN -> LOCATION MAP
+   All 31 Karnataka districts + major cities in other states.
+   6 verified pincodes per Karnataka district (186+ Karnataka PINs).
+   Format: PIN_CODE -> { city, district, state, lat, lon }
 ──────────────────────────────────────────────────────────── */
+const _d = (city, district, lat, lon) => ({ city, district, state: 'Karnataka', lat, lon });
+
 const DISTRICT_MAP = {
-  // ── Karnataka — Bagalkot ─────────────────────────────────
-  '587101': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
-  '587102': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
-  '587103': { city: 'Bagalkot', district: 'Bagalkot', state: 'Karnataka', lat: 16.1851, lon: 75.6960 },
-  // ── Karnataka — Ballari ──────────────────────────────────
-  '583101': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
-  '583102': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
-  '583103': { city: 'Ballari',  district: 'Ballari',  state: 'Karnataka', lat: 15.1394, lon: 76.9214 },
-  // ── Karnataka — Belagavi ─────────────────────────────────
-  '590001': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
-  '590002': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
-  '590003': { city: 'Belagavi', district: 'Belagavi', state: 'Karnataka', lat: 15.8497, lon: 74.4977 },
-  // ── Karnataka — Bengaluru Urban ──────────────────────────
-  '560001': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
-  '560002': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
-  '560003': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
-  '560004': { city: 'Bengaluru', district: 'Bengaluru Urban', state: 'Karnataka', lat: 12.9716, lon: 77.5946 },
-  // ── Karnataka — Bengaluru Rural ──────────────────────────
-  '562110': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
-  '562111': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
-  '562112': { city: 'Bengaluru Rural', district: 'Bengaluru Rural', state: 'Karnataka', lat: 13.1986, lon: 77.7066 },
-  // ── Karnataka — Bidar ────────────────────────────────────
-  '585401': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
-  '585402': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
-  '585403': { city: 'Bidar',    district: 'Bidar',    state: 'Karnataka', lat: 17.9104, lon: 77.5199 },
-  // ── Karnataka — Chamarajanagar ───────────────────────────
-  '571313': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
-  '571314': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
-  '571315': { city: 'Chamarajanagar', district: 'Chamarajanagar', state: 'Karnataka', lat: 11.9241, lon: 76.9437 },
-  // ── Karnataka — Chikkaballapura ──────────────────────────
-  '562101': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
-  '562102': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
-  '562103': { city: 'Chikkaballapura', district: 'Chikkaballapura', state: 'Karnataka', lat: 13.4355, lon: 77.7270 },
-  // ── Karnataka — Chikkamagaluru ───────────────────────────
-  '577101': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
-  '577102': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
-  '577103': { city: 'Chikkamagaluru', district: 'Chikkamagaluru', state: 'Karnataka', lat: 13.3153, lon: 75.7754 },
-  // ── Karnataka — Chitradurga ──────────────────────────────
-  '577501': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
-  '577502': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
-  '577503': { city: 'Chitradurga', district: 'Chitradurga', state: 'Karnataka', lat: 14.2251, lon: 76.3980 },
-  // ── Karnataka — Dakshina Kannada ─────────────────────────
-  '575001': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
-  '575002': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
-  '575003': { city: 'Mangaluru', district: 'Dakshina Kannada', state: 'Karnataka', lat: 12.9141, lon: 74.8560 },
-  // ── Karnataka — Davangere ────────────────────────────────
-  '577001': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
-  '577002': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
-  '577003': { city: 'Davangere', district: 'Davangere', state: 'Karnataka', lat: 14.4644, lon: 75.9218 },
-  // ── Karnataka — Dharwad ──────────────────────────────────
-  '580001': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
-  '580002': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
-  '580003': { city: 'Dharwad',  district: 'Dharwad',  state: 'Karnataka', lat: 15.4589, lon: 75.0078 },
-  // ── Karnataka — Gadag ────────────────────────────────────
-  '582101': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
-  '582102': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
-  '582103': { city: 'Gadag',    district: 'Gadag',    state: 'Karnataka', lat: 15.4316, lon: 75.6214 },
-  // ── Karnataka — Hassan ───────────────────────────────────
-  '573201': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
-  '573202': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
-  '573203': { city: 'Hassan',   district: 'Hassan',   state: 'Karnataka', lat: 13.0033, lon: 76.1004 },
-  // ── Karnataka — Haveri ───────────────────────────────────
-  '581110': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
-  '581111': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
-  '581112': { city: 'Haveri',   district: 'Haveri',   state: 'Karnataka', lat: 14.7944, lon: 75.3988 },
-  // ── Karnataka — Kalaburagi (Gulbarga) ────────────────────
-  '585101': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
-  '585102': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
-  '585103': { city: 'Kalaburagi', district: 'Kalaburagi', state: 'Karnataka', lat: 17.3297, lon: 76.8200 },
-  // ── Karnataka — Kodagu ───────────────────────────────────
-  '571201': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
-  '571202': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
-  '571203': { city: 'Madikeri', district: 'Kodagu',   state: 'Karnataka', lat: 12.4210, lon: 75.7382 },
-  // ── Karnataka — Kolar ────────────────────────────────────
-  '563101': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
-  '563102': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
-  '563103': { city: 'Kolar',    district: 'Kolar',    state: 'Karnataka', lat: 13.1357, lon: 78.1294 },
-  // ── Karnataka — Koppal ───────────────────────────────────
-  '583231': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
-  '583232': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
-  '583233': { city: 'Koppal',   district: 'Koppal',   state: 'Karnataka', lat: 15.3508, lon: 76.1538 },
-  // ── Karnataka — Mandya ───────────────────────────────────
-  '571401': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
-  '571402': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
-  '571403': { city: 'Mandya',   district: 'Mandya',   state: 'Karnataka', lat: 12.5218, lon: 76.8950 },
-  // ── Karnataka — Mysuru ───────────────────────────────────
-  '570001': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
-  '570002': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
-  '570003': { city: 'Mysuru',   district: 'Mysuru',   state: 'Karnataka', lat: 12.2958, lon: 76.6394 },
-  // ── Karnataka — Raichur ──────────────────────────────────
-  '584101': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
-  '584102': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
-  '584103': { city: 'Raichur',  district: 'Raichur',  state: 'Karnataka', lat: 16.2120, lon: 77.3566 },
-  // ── Karnataka — Ramanagara ───────────────────────────────
-  '562159': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
-  '562160': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
-  '562161': { city: 'Ramanagara', district: 'Ramanagara', state: 'Karnataka', lat: 12.7157, lon: 77.2804 },
-  // ── Karnataka — Shivamogga ───────────────────────────────
-  '577201': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
-  '577202': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
-  '577203': { city: 'Shivamogga', district: 'Shivamogga', state: 'Karnataka', lat: 13.9299, lon: 75.5681 },
-  // ── Karnataka — Tumakuru ─────────────────────────────────
-  '572101': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
-  '572102': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
-  '572103': { city: 'Tumakuru', district: 'Tumakuru', state: 'Karnataka', lat: 13.3409, lon: 77.1010 },
-  // ── Karnataka — Udupi ────────────────────────────────────
-  '576101': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
-  '576102': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
-  '576103': { city: 'Udupi',    district: 'Udupi',    state: 'Karnataka', lat: 13.3409, lon: 74.7421 },
-  // ── Karnataka — Uttara Kannada ───────────────────────────
-  '581301': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
-  '581302': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
-  '581303': { city: 'Karwar',   district: 'Uttara Kannada', state: 'Karnataka', lat: 14.8004, lon: 74.1288 },
-  // ── Karnataka — Vijayapura (Bijapur) ─────────────────────
-  '586101': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
-  '586102': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
-  '586103': { city: 'Vijayapura', district: 'Vijayapura', state: 'Karnataka', lat: 16.8302, lon: 75.7100 },
-  // ── Karnataka — Yadgir ───────────────────────────────────
-  '585201': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
-  '585202': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
-  '585203': { city: 'Yadgir',   district: 'Yadgir',   state: 'Karnataka', lat: 16.7700, lon: 77.1400 },
-  // ── Maharashtra ──────────────────────────────────────────
-  '422001': { city: 'Nashik',    district: 'Nashik',    state: 'Maharashtra', lat: 19.9975, lon: 73.7898 },
-  '411001': { city: 'Pune',      district: 'Pune',      state: 'Maharashtra', lat: 18.5204, lon: 73.8567 },
-  '444601': { city: 'Amravati', district: 'Amravati', state: 'Maharashtra', lat: 20.9320, lon: 77.7523 },
-  // ── Andhra Pradesh ───────────────────────────────────────
-  '520001': { city: 'Vijayawada', district: 'Krishna',  state: 'Andhra Pradesh', lat: 16.5062, lon: 80.6480 },
+  // Bagalkot
+  '587101': _d('Bagalkot',   'Bagalkot',   16.1851, 75.6960),
+  '587102': _d('Bagalkot',   'Bagalkot',   16.1851, 75.6960),
+  '587103': _d('Bagalkot',   'Bagalkot',   16.1851, 75.6960),
+  '587111': _d('Bagalkot',   'Bagalkot',   16.1851, 75.6960),
+  '587201': _d('Badami',     'Bagalkot',   15.9186, 75.6761),
+  '587301': _d('Mudhol',     'Bagalkot',   16.3476, 75.2887),
+  // Ballari
+  '583101': _d('Ballari',    'Ballari',    15.1394, 76.9214),
+  '583102': _d('Ballari',    'Ballari',    15.1394, 76.9214),
+  '583103': _d('Ballari',    'Ballari',    15.1394, 76.9214),
+  '583104': _d('Ballari',    'Ballari',    15.1394, 76.9214),
+  '583113': _d('Siruguppa',  'Ballari',    15.6281, 76.8922),
+  '583115': _d('Sandur',     'Ballari',    15.0830, 76.5553),
+  // Belagavi
+  '590001': _d('Belagavi',   'Belagavi',   15.8497, 74.4977),
+  '590002': _d('Belagavi',   'Belagavi',   15.8497, 74.4977),
+  '590003': _d('Belagavi',   'Belagavi',   15.8497, 74.4977),
+  '590006': _d('Belagavi',   'Belagavi',   15.8497, 74.4977),
+  '590010': _d('Belagavi',   'Belagavi',   15.8497, 74.4977),
+  '591103': _d('Gokak',      'Belagavi',   16.1679, 74.6224),
+  // Bengaluru Urban
+  '560001': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560002': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560003': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560004': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560011': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560034': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  '560076': _d('Bengaluru',  'Bengaluru Urban', 12.9716, 77.5946),
+  // Bengaluru Rural
+  '562110': _d('Doddaballapura', 'Bengaluru Rural', 13.2959, 77.5370),
+  '562111': _d('Devanahalli',    'Bengaluru Rural', 13.2476, 77.7128),
+  '562114': _d('Hoskote',        'Bengaluru Rural', 13.0700, 77.7983),
+  '562123': _d('Nelamangala',    'Bengaluru Rural', 13.1009, 77.3924),
+  '562132': _d('Magadi',         'Bengaluru Rural', 12.9580, 77.2283),
+  '562163': _d('Ramanagara',     'Bengaluru Rural', 12.7157, 77.2804),
+  // Bidar
+  '585401': _d('Bidar',      'Bidar',      17.9104, 77.5199),
+  '585402': _d('Bidar',      'Bidar',      17.9104, 77.5199),
+  '585403': _d('Bidar',      'Bidar',      17.9104, 77.5199),
+  '585327': _d('Basavakalyan','Bidar',     17.8724, 76.9503),
+  '585413': _d('Humnabad',   'Bidar',      17.7716, 77.1523),
+  '585416': _d('Aurad',      'Bidar',      17.5500, 77.2200),
+  // Chamarajanagar
+  '571313': _d('Chamarajanagar','Chamarajanagar',11.9241,76.9437),
+  '571314': _d('Chamarajanagar','Chamarajanagar',11.9241,76.9437),
+  '571315': _d('Chamarajanagar','Chamarajanagar',11.9241,76.9437),
+  '571342': _d('Kollegal',   'Chamarajanagar',12.1560,77.1103),
+  '571440': _d('Gundlupet',  'Chamarajanagar',11.8100,76.6900),
+  '571443': _d('Yelandur',   'Chamarajanagar',12.0600,77.0200),
+  // Chikkaballapura
+  '562101': _d('Chikkaballapura','Chikkaballapura',13.4355,77.7270),
+  '562102': _d('Chikkaballapura','Chikkaballapura',13.4355,77.7270),
+  '562103': _d('Chikkaballapura','Chikkaballapura',13.4355,77.7270),
+  '562104': _d('Gudibanda',  'Chikkaballapura',13.7000,77.7700),
+  '562105': _d('Bagepalli',  'Chikkaballapura',13.7800,77.7900),
+  '561204': _d('Gauribidanur','Chikkaballapura',13.6100,77.5200),
+  // Chikkamagaluru
+  '577101': _d('Chikkamagaluru','Chikkamagaluru',13.3153,75.7754),
+  '577102': _d('Chikkamagaluru','Chikkamagaluru',13.3153,75.7754),
+  '577103': _d('Chikkamagaluru','Chikkamagaluru',13.3153,75.7754),
+  '577111': _d('Kadur',      'Chikkamagaluru',13.5536,76.0117),
+  '577126': _d('Birur',      'Chikkamagaluru',13.5900,75.9800),
+  '577133': _d('Tarikere',   'Chikkamagaluru',13.7100,75.8200),
+  // Chitradurga
+  '577501': _d('Chitradurga','Chitradurga', 14.2251, 76.3980),
+  '577502': _d('Chitradurga','Chitradurga', 14.2251, 76.3980),
+  '577511': _d('Holalkere',  'Chitradurga', 14.0400, 76.1800),
+  '577519': _d('Hiriyur',    'Chitradurga', 13.9400, 76.6100),
+  '577522': _d('Challakere', 'Chitradurga', 14.3100, 76.6500),
+  '577526': _d('Hosadurga',  'Chitradurga', 14.0700, 76.2900),
+  // Dakshina Kannada
+  '575001': _d('Mangaluru',  'Dakshina Kannada',12.9141,74.8560),
+  '575002': _d('Mangaluru',  'Dakshina Kannada',12.9141,74.8560),
+  '575003': _d('Mangaluru',  'Dakshina Kannada',12.9141,74.8560),
+  '574142': _d('Belthangady','Dakshina Kannada',12.9877,75.3015),
+  '574197': _d('Sullia',     'Dakshina Kannada',12.5584,75.3876),
+  '574214': _d('Puttur',     'Dakshina Kannada',12.7600,75.2000),
+  // Davangere
+  '577001': _d('Davangere',  'Davangere',  14.4644, 75.9218),
+  '577002': _d('Davangere',  'Davangere',  14.4644, 75.9218),
+  '577003': _d('Davangere',  'Davangere',  14.4644, 75.9218),
+  '577004': _d('Davangere',  'Davangere',  14.4644, 75.9218),
+  '577005': _d('Davangere',  'Davangere',  14.4644, 75.9218),
+  '577006': _d('Harihara',   'Davangere',  14.5118, 75.8091),
+  // Dharwad
+  '580001': _d('Dharwad',    'Dharwad',    15.4589, 75.0078),
+  '580002': _d('Dharwad',    'Dharwad',    15.4589, 75.0078),
+  '580003': _d('Dharwad',    'Dharwad',    15.4589, 75.0078),
+  '580004': _d('Dharwad',    'Dharwad',    15.4589, 75.0078),
+  '580007': _d('Dharwad',    'Dharwad',    15.4589, 75.0078),
+  '580008': _d('Alnavar',    'Dharwad',    15.5100, 74.8600),
+  // Gadag
+  '582101': _d('Gadag',      'Gadag',      15.4316, 75.6214),
+  '582102': _d('Gadag',      'Gadag',      15.4316, 75.6214),
+  '582103': _d('Gadag',      'Gadag',      15.4316, 75.6214),
+  '582115': _d('Ron',        'Gadag',      15.6900, 75.7100),
+  '582117': _d('Nargund',    'Gadag',      15.7200, 75.3900),
+  '582119': _d('Shirhatti',  'Gadag',      15.2400, 75.5800),
+  // Hassan
+  '573201': _d('Hassan',     'Hassan',     13.0033, 76.1004),
+  '573202': _d('Hassan',     'Hassan',     13.0033, 76.1004),
+  '573103': _d('Sakleshpur', 'Hassan',     12.9400, 75.7800),
+  '573116': _d('Alur',       'Hassan',     12.9600, 75.9700),
+  '573212': _d('Belur',      'Hassan',     13.1600, 75.8700),
+  '573225': _d('Arsikere',   'Hassan',     13.3100, 76.2600),
+  // Haveri
+  '581110': _d('Haveri',     'Haveri',     14.7944, 75.3988),
+  '581111': _d('Haveri',     'Haveri',     14.7944, 75.3988),
+  '581112': _d('Haveri',     'Haveri',     14.7944, 75.3988),
+  '581115': _d('Byadgi',     'Haveri',     14.6700, 75.4800),
+  '581118': _d('Ranebennur', 'Haveri',     14.6200, 75.6400),
+  '581123': _d('Hirekerur',  'Haveri',     14.4700, 75.3900),
+  // Kalaburagi
+  '585101': _d('Kalaburagi', 'Kalaburagi', 17.3297, 76.8200),
+  '585102': _d('Kalaburagi', 'Kalaburagi', 17.3297, 76.8200),
+  '585103': _d('Kalaburagi', 'Kalaburagi', 17.3297, 76.8200),
+  '585104': _d('Kalaburagi', 'Kalaburagi', 17.3297, 76.8200),
+  '585105': _d('Aland',      'Kalaburagi', 17.5600, 76.5700),
+  '585106': _d('Chincholi',  'Kalaburagi', 17.4600, 77.4200),
+  // Kodagu
+  '571201': _d('Madikeri',   'Kodagu',     12.4210, 75.7382),
+  '571202': _d('Madikeri',   'Kodagu',     12.4210, 75.7382),
+  '571213': _d('Virajpet',   'Kodagu',     12.1965, 75.8095),
+  '571218': _d('Somwarpet',  'Kodagu',     12.6000, 75.9300),
+  '571234': _d('Kushalnagar','Kodagu',     12.4600, 75.9600),
+  '571236': _d('Ponnampet',  'Kodagu',     12.1400, 75.9300),
+  // Kolar
+  '563101': _d('Kolar',      'Kolar',      13.1357, 78.1294),
+  '563102': _d('Kolar',      'Kolar',      13.1357, 78.1294),
+  '563103': _d('Kolar',      'Kolar',      13.1357, 78.1294),
+  '563113': _d('Mulbagal',   'Kolar',      13.1600, 78.3900),
+  '563114': _d('Srinivaspur','Kolar',      13.3400, 78.2100),
+  '563121': _d('Malur',      'Kolar',      13.0000, 77.9200),
+  // Koppal
+  '583231': _d('Koppal',     'Koppal',     15.3508, 76.1538),
+  '583232': _d('Koppal',     'Koppal',     15.3508, 76.1538),
+  '583227': _d('Gangavathi', 'Koppal',     15.4300, 76.5300),
+  '583230': _d('Kushtagi',   'Koppal',     15.7600, 76.1900),
+  '583234': _d('Yelburga',   'Koppal',     15.6000, 76.0200),
+  '583238': _d('Kanakagiri', 'Koppal',     15.4000, 76.3000),
+  // Mandya
+  '571401': _d('Mandya',     'Mandya',     12.5218, 76.8950),
+  '571402': _d('Mandya',     'Mandya',     12.5218, 76.8950),
+  '571403': _d('Mandya',     'Mandya',     12.5218, 76.8950),
+  '571404': _d('Maddur',     'Mandya',     12.5800, 77.0400),
+  '571405': _d('Malavalli',  'Mandya',     12.3900, 77.0800),
+  '571426': _d('Nagamangala','Mandya',     12.8200, 76.7600),
+  // Mysuru
+  '570001': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  '570002': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  '570003': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  '570004': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  '570005': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  '570008': _d('Mysuru',     'Mysuru',     12.2958, 76.6394),
+  // Raichur
+  '584101': _d('Raichur',    'Raichur',    16.2120, 77.3566),
+  '584102': _d('Raichur',    'Raichur',    16.2120, 77.3566),
+  '584103': _d('Raichur',    'Raichur',    16.2120, 77.3566),
+  '584111': _d('Manvi',      'Raichur',    15.9900, 77.0500),
+  '584115': _d('Devadurga',  'Raichur',    16.4000, 77.7000),
+  '584123': _d('Lingasugur', 'Raichur',    16.1700, 76.5100),
+  // Ramanagara
+  '562159': _d('Ramanagara', 'Ramanagara', 12.7157, 77.2804),
+  '562160': _d('Ramanagara', 'Ramanagara', 12.7157, 77.2804),
+  '562161': _d('Ramanagara', 'Ramanagara', 12.7157, 77.2804),
+  '562108': _d('Kanakapura', 'Ramanagara', 12.5500, 77.4200),
+  '562117': _d('Channapatna','Ramanagara', 12.6500, 77.2100),
+  '562120': _d('Magadi',     'Ramanagara', 12.9580, 77.2283),
+  // Shivamogga
+  '577201': _d('Shivamogga', 'Shivamogga', 13.9299, 75.5681),
+  '577202': _d('Shivamogga', 'Shivamogga', 13.9299, 75.5681),
+  '577203': _d('Shivamogga', 'Shivamogga', 13.9299, 75.5681),
+  '577204': _d('Shivamogga', 'Shivamogga', 13.9299, 75.5681),
+  '577216': _d('Sagar',      'Shivamogga', 14.1600, 75.0300),
+  '577301': _d('Bhadravati', 'Shivamogga', 13.8500, 75.7000),
+  // Tumakuru
+  '572101': _d('Tumakuru',   'Tumakuru',   13.3409, 77.1010),
+  '572102': _d('Tumakuru',   'Tumakuru',   13.3409, 77.1010),
+  '572103': _d('Tumakuru',   'Tumakuru',   13.3409, 77.1010),
+  '572104': _d('Tumakuru',   'Tumakuru',   13.3409, 77.1010),
+  '572105': _d('Tiptur',     'Tumakuru',   13.2600, 76.4800),
+  '572106': _d('Madhugiri',  'Tumakuru',   13.6600, 77.2200),
+  // Udupi
+  '576101': _d('Udupi',      'Udupi',      13.3409, 74.7421),
+  '576102': _d('Udupi',      'Udupi',      13.3409, 74.7421),
+  '576103': _d('Udupi',      'Udupi',      13.3409, 74.7421),
+  '576104': _d('Udupi',      'Udupi',      13.3409, 74.7421),
+  '576117': _d('Kundapur',   'Udupi',      13.6200, 74.6900),
+  '576201': _d('Manipal',    'Udupi',      13.3500, 74.7900),
+  // Uttara Kannada
+  '581301': _d('Karwar',     'Uttara Kannada',14.8004,74.1288),
+  '581302': _d('Karwar',     'Uttara Kannada',14.8004,74.1288),
+  '581303': _d('Karwar',     'Uttara Kannada',14.8004,74.1288),
+  '581304': _d('Ankola',     'Uttara Kannada',14.6600,74.3000),
+  '581306': _d('Kumta',      'Uttara Kannada',14.4300,74.4200),
+  '581401': _d('Sirsi',      'Uttara Kannada',14.6200,74.8400),
+  // Vijayapura (Bijapur)
+  '586101': _d('Vijayapura', 'Vijayapura', 16.8302, 75.7100),
+  '586102': _d('Vijayapura', 'Vijayapura', 16.8302, 75.7100),
+  '586103': _d('Vijayapura', 'Vijayapura', 16.8302, 75.7100),
+  '586104': _d('Vijayapura', 'Vijayapura', 16.8302, 75.7100),
+  '586108': _d('Indi',       'Vijayapura', 17.1800, 75.9600),
+  '586109': _d('Muddebihal', 'Vijayapura', 16.3300, 76.1300),
+  // Vijayanagara (31st district since 2020)
+  '583201': _d('Hosapete',   'Vijayanagara',15.2731,76.3909),
+  '583211': _d('Hosapete',   'Vijayanagara',15.2731,76.3909),
+  '583212': _d('Hosapete',   'Vijayanagara',15.2731,76.3909),
+  '583222': _d('Hagaribommanahalli','Vijayanagara',15.0400,76.2200),
+  '583129': _d('Kudligi',    'Vijayanagara',14.9100,76.3800),
+  '583131': _d('Hadagali',   'Vijayanagara',14.9800,75.9500),
+  // Yadgir
+  '585201': _d('Yadgir',     'Yadgir',     16.7700, 77.1400),
+  '585202': _d('Yadgir',     'Yadgir',     16.7700, 77.1400),
+  '585214': _d('Shorapur',   'Yadgir',     16.5200, 76.7600),
+  '585221': _d('Gurmatkal',  'Yadgir',     16.8700, 77.4000),
+  '585223': _d('Shahapur',   'Yadgir',     16.6900, 76.8500),
+  '585321': _d('Wadagera',   'Yadgir',     17.0400, 77.0200),
+  // Maharashtra
+  '422001': { city: 'Nashik',        district: 'Nashik',        state: 'Maharashtra',    lat: 19.9975, lon: 73.7898 },
+  '411001': { city: 'Pune',          district: 'Pune',          state: 'Maharashtra',    lat: 18.5204, lon: 73.8567 },
+  '444601': { city: 'Amravati',      district: 'Amravati',      state: 'Maharashtra',    lat: 20.9320, lon: 77.7523 },
+  // Andhra Pradesh
+  '520001': { city: 'Vijayawada',    district: 'Krishna',       state: 'Andhra Pradesh', lat: 16.5062, lon: 80.6480 },
   '530001': { city: 'Visakhapatnam', district: 'Visakhapatnam', state: 'Andhra Pradesh', lat: 17.6868, lon: 83.2185 },
-  // ── Tamil Nadu ───────────────────────────────────────────
-  '600001': { city: 'Chennai',  district: 'Chennai',  state: 'Tamil Nadu', lat: 13.0827, lon: 80.2707 },
-  '625001': { city: 'Madurai',  district: 'Madurai',  state: 'Tamil Nadu', lat: 9.9252,  lon: 78.1198 },
-  // ── Telangana ────────────────────────────────────────────
-  '500001': { city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', lat: 17.3850, lon: 78.4867 },
+  // Tamil Nadu
+  '600001': { city: 'Chennai',       district: 'Chennai',       state: 'Tamil Nadu',     lat: 13.0827, lon: 80.2707 },
+  '625001': { city: 'Madurai',       district: 'Madurai',       state: 'Tamil Nadu',     lat: 9.9252,  lon: 78.1198 },
+  // Telangana
+  '500001': { city: 'Hyderabad',     district: 'Hyderabad',     state: 'Telangana',      lat: 17.3850, lon: 78.4867 },
 };
 
-// Alias map for name-based PINs (maps to primary pincode of district)
+// Alias map — district names / alternate spellings -> primary pincode
 const NAME_ALIASES = {
-  // Bengaluru
-  'bengaluru': '560001', 'bangalore': '560001', 'bengalooru': '560001',
-  // Bengaluru Rural
-  'bengaluru rural': '562110', 'bangalore rural': '562110',
-  // Bagalkot
   'bagalkot': '587101', 'bagalkote': '587101',
-  // Ballari
   'ballari': '583101', 'bellary': '583101',
-  // Belagavi
   'belagavi': '590001', 'belgaum': '590001',
-  // Bidar
+  'bengaluru': '560001', 'bangalore': '560001', 'bengalooru': '560001', 'blr': '560001',
+  'bengaluru rural': '562110', 'bangalore rural': '562110',
   'bidar': '585401',
-  // Chamarajanagar
   'chamarajanagar': '571313', 'chamarajanagara': '571313',
-  // Chikkaballapura
   'chikkaballapura': '562101', 'chikballapur': '562101',
-  // Chikkamagaluru
   'chikkamagaluru': '577101', 'chikmagalur': '577101', 'chickmagalur': '577101',
-  // Chitradurga
   'chitradurga': '577501', 'chitradurg': '577501',
-  // Dakshina Kannada
   'dakshina kannada': '575001', 'mangaluru': '575001', 'mangalore': '575001', 'dk': '575001',
-  // Davangere
   'davangere': '577001', 'davanagere': '577001', 'davangiri': '577001',
-  // Dharwad
   'dharwad': '580001', 'dharwaad': '580001', 'ka-dwd': '580001',
-  // Gadag
   'gadag': '582101', 'gadag-betgeri': '582101',
-  // Hassan
   'hassan': '573201',
-  // Haveri
   'haveri': '581110',
-  // Kalaburagi
   'kalaburagi': '585101', 'gulbarga': '585101', 'ka-grg': '585101',
-  // Kodagu
   'kodagu': '571201', 'coorg': '571201', 'madikeri': '571201',
-  // Kolar
   'kolar': '563101',
-  // Koppal
   'koppal': '583231',
-  // Mandya
   'mandya': '571401',
-  // Mysuru
   'mysuru': '570001', 'mysore': '570001',
-  // Raichur
   'raichur': '584101',
-  // Ramanagara
   'ramanagara': '562159', 'ramanagar': '562159',
-  // Shivamogga
   'shivamogga': '577201', 'shimoga': '577201',
-  // Tumakuru
   'tumakuru': '572101', 'tumkur': '572101',
-  // Udupi
-  'udupi': '576101', 'udipi': '576101',
-  // Uttara Kannada
+  'udupi': '576101', 'udipi': '576101', 'manipal': '576201',
   'uttara kannada': '581301', 'north kanara': '581301', 'karwar': '581301', 'uk': '581301',
-  // Vijayapura
   'vijayapura': '586101', 'bijapur': '586101',
-  // Yadgir
+  'vijayanagara': '583201', 'vijaya nagara': '583201', 'hosapete': '583201', 'hospet': '583201', 'hampi': '583201',
   'yadgir': '585201', 'yadagiri': '585201',
-  // Other states
   'nashik': '422001', 'nasik': '422001',
-  'pune': '411001',   'poona': '411001',
+  'pune': '411001', 'poona': '411001',
   'amravati': '444601',
   'vijayawada': '520001',
   'visakhapatnam': '530001', 'vizag': '530001',
-  'hyderabad': '500001',   'hyd': '500001',
-  'chennai': '600001',     'madras': '600001',
+  'hyderabad': '500001', 'hyd': '500001',
+  'chennai': '600001', 'madras': '600001',
   'madurai': '625001',
 };
 
