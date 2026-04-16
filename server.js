@@ -31,7 +31,11 @@ const PORT = process.env.PORT || 3000;
    ENVIRONMENT VALIDATION
 ──────────────────────────────────────────────────────────── */
 const REQUIRED_ENV = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'GEMINI_API_KEY'];
-const OPTIONAL_ENV = ['OPENWEATHER_API_KEY'];   // Optional: Gemini uses search grounding as fallback
+const OPTIONAL_ENV = ['ACCUWEATHER_API_KEY', 'OPENWEATHER_API_KEY'];
+
+if (!process.env.ACCUWEATHER_API_KEY) {
+  console.warn('[STARTUP] ACCUWEATHER_API_KEY not set — will skip AccuWeather and use OWM/Gemini.');
+}
 
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missingEnv.length > 0) {
@@ -422,8 +426,83 @@ async function fetchWeatherIMD(district) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   WEATHER DATA FETCH — OpenWeatherMap (Fallback)
+   WEATHER DATA FETCH — AccuWeather (Priority 2)
+   Uses AccuWeather Location API + Current Conditions + 5-day Forecast.
+   Location keys are cached in memory to avoid duplicate geo-lookups.
 ──────────────────────────────────────────────────────────── */
+const acuLocationCache = new Map();  // district.city → locationKey
+
+async function fetchWeatherAccuWeather(district) {
+  if (!process.env.ACCUWEATHER_API_KEY) return null;
+  const key = process.env.ACCUWEATHER_API_KEY;
+
+  try {
+    // Step 1: Get AccuWeather location key (cached per district city)
+    let locationKey = acuLocationCache.get(district.city);
+    if (!locationKey) {
+      const geoRes = await axios.get(
+        'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search',
+        {
+          params: { apikey: key, q: `${district.lat},${district.lon}`, language: 'en-us' },
+          timeout: 6000,
+        }
+      );
+      locationKey = geoRes.data?.Key;
+      if (!locationKey) throw new Error('No location key returned');
+      acuLocationCache.set(district.city, locationKey);
+      console.log(`[ACU] Location key cached for ${district.city}: ${locationKey}`);
+    }
+
+    // Step 2: Fetch current conditions + 5-day forecast in parallel
+    const [currentRes, forecastRes] = await Promise.all([
+      axios.get(
+        `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}`,
+        { params: { apikey: key, details: true }, timeout: 6000 }
+      ),
+      axios.get(
+        `http://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}`,
+        { params: { apikey: key, metric: true, details: false }, timeout: 6000 }
+      ),
+    ]);
+
+    const current  = currentRes.data?.[0];
+    const forecast = forecastRes.data?.DailyForecasts || [];
+    if (!current) throw new Error('Empty current conditions response');
+
+    // Build 5-day forecast
+    const days = forecast.map((f, i) => {
+      const date = new Date(f.Date);
+      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return {
+        day:       i === 0 ? 'Today' : (i === 1 ? 'Tomorrow' : dayNames[date.getDay()]),
+        high_c:    Math.round(f.Temperature?.Maximum?.Value ?? 0),
+        low_c:     Math.round(f.Temperature?.Minimum?.Value ?? 0),
+        rain_pct:  Math.round(f.Day?.PrecipitationProbability ?? 0),
+        condition: f.Day?.IconPhrase || 'N/A',
+      };
+    });
+
+    console.log(`[ACU] Fetched weather for ${district.city} — ${current.WeatherText}`);
+    return {
+      temperature_c:     Math.round(current.Temperature?.Metric?.Value ?? 0),
+      feels_like_c:      Math.round(current.RealFeelTemperature?.Metric?.Value ?? current.Temperature?.Metric?.Value ?? 0),
+      humidity_pct:      current.RelativeHumidity ?? null,
+      wind_kmh:          Math.round((current.Wind?.Speed?.Metric?.Value ?? 0)),
+      condition:         current.WeatherText || 'N/A',
+      rainfall_prob_pct: Math.round(current.PrecipitationProbability ?? (days[0]?.rain_pct ?? 0)),
+      uv_index:          current.UVIndex ?? null,
+      forecast:          days,
+      source:            'AccuWeather',
+      fetched_at:        new Date().toISOString(),
+    };
+
+  } catch (err) {
+    console.error('[ACU] AccuWeather fetch failed:', err.message);
+    return null;
+  }
+}
+
+
 async function fetchWeatherOWM(district) {
   if (!process.env.OPENWEATHER_API_KEY) return null;
 
@@ -500,11 +579,15 @@ async function fetchWeather(district) {
   const imdData = await fetchWeatherIMD(district);
   if (imdData) return imdData;
 
-  // 2. Fall back to OpenWeatherMap
+  // 2. Try AccuWeather (detailed forecast + feels-like + UV index)
+  const acuData = await fetchWeatherAccuWeather(district);
+  if (acuData) return acuData;
+
+  // 3. Fall back to OpenWeatherMap
   const owmData = await fetchWeatherOWM(district);
   if (owmData) return { ...owmData, source: 'OpenWeatherMap' };
 
-  // 3. No live data — Gemini will use training knowledge
+  // 4. No live data — Gemini will use training knowledge
   console.warn(`[WEATHER] No live data for ${district.city} — Gemini will use training knowledge.`);
   return null;
 }
@@ -755,6 +838,7 @@ app.listen(PORT, () => {
   console.log(`   NODE_ENV:            ${process.env.NODE_ENV || 'development'}`);
   console.log(`   TWILIO_ACCOUNT_SID:  ${process.env.TWILIO_ACCOUNT_SID ? '✓ Set' : '✗ Missing'}`);
   console.log(`   GEMINI_API_KEY:      ${process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Missing'}`);
+  console.log(`   ACCUWEATHER_API_KEY: ${process.env.ACCUWEATHER_API_KEY ? '✓ Set' : '⚠ Optional (not set)'}`);
   console.log(`   OPENWEATHER_API_KEY: ${process.env.OPENWEATHER_API_KEY ? '✓ Set' : '⚠ Optional (not set)'}`);
   console.log(`   IMD Mausamgram:      ✓ Enabled (primary weather source)`);
   console.log(`\n🔗 Use ngrok to expose this server to Twilio:`);
